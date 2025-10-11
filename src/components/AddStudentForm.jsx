@@ -1,5 +1,5 @@
-// components/AddStudentForm.jsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import axios from "axios";
 import {
   Box,
   Typography,
@@ -7,7 +7,6 @@ import {
   MenuItem,
   Button,
   Grid,
-  Paper,
   Alert,
   Card,
   CardContent,
@@ -22,7 +21,8 @@ import {
   InputLabel,
   Select,
   FormHelperText,
-} from '@mui/material';
+  CircularProgress,
+} from "@mui/material";
 import {
   CloudUpload as CloudUploadIcon,
   Person as PersonIcon,
@@ -32,79 +32,62 @@ import {
   Save as SaveIcon,
   Clear as ClearIcon,
   CheckCircle as CheckCircleIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 const AddStudentForm = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    fullName: '',
-    studentClass: '',
-    rollNumber: '',
-    dob: '',
-    studentWhatsapp: '',
-    studentCell: '',
-    bForm: '',
-    gender: '',
-    nationality: 'PAKISTANI',
-    fatherCnic: '',
-    parentsWhatsapp: '',
-    parentsCell: '',
-    fatherName: '',
-    motherName: '',
-    parentEmail: '',
-    address: '',
-    emergencyContact: '',
-    admissionDate: '',
-    batchNo: '25',
-    schoolName: '',
-    referralSource: '',
-    note: '',
+    fullName: "",
+    studentClass: "",
+    rollNumber: "",
+    dob: "",
+    studentWhatsapp: "",
+    studentCell: "",
+    bForm: "",
+    gender: "",
+    nationality: "PAKISTANI",
+    fatherCnic: "",
+    parentsWhatsapp: "",
+    parentsCell: "",
+    fatherName: "",
+    motherName: "",
+    parentEmail: "",
+    address: "",
+    emergencyContact: "",
+    admissionDate: "",
+    batchNo: "25",
+    schoolName: "",
+    referralSource: "",
+    note: "",
   });
-
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const steps = [
-    'Personal Information',
-    'Contact Details',
-    'Parent Information',
-    'Additional Details',
+    "Personal Information",
+    "Contact Details",
+    "Parent Information",
+    "Additional Details",
   ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
-    }
+    if (errors[name]) setErrors({ ...errors, [name]: "" });
   };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
-
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Form submission logic would go here
-    setSuccessMessage('Student added successfully!');
-    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   const generateRollNumber = () => {
@@ -117,232 +100,220 @@ const AddStudentForm = () => {
     }
   };
 
+  const handleNext = () => setActiveStep((prev) => prev + 1);
+  const handleBack = () => setActiveStep((prev) => prev - 1);
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fullName) newErrors.fullName = "Full Name is required";
+    if (!formData.studentClass) newErrors.studentClass = "Class is required";
+    if (!formData.dob) newErrors.dob = "Date of birth is required";
+    if (!formData.gender) newErrors.gender = "Gender is required";
+    if (!formData.bForm) newErrors.bForm = "B-Form is required";
+    if (!formData.address) newErrors.address = "Address is required";
+    if (!formData.fatherName) newErrors.fatherName = "Father's name is required";
+    if (!formData.motherName) newErrors.motherName = "Mother's name is required";
+    if (!formData.fatherCnic) newErrors.fatherCnic = "Father CNIC is required";
+    if (!formData.parentsWhatsapp)
+      newErrors.parentsWhatsapp = "Parent WhatsApp is required";
+    if (!formData.parentsCell)
+      newErrors.parentsCell = "Parent Cell is required";
+    if (!formData.emergencyContact)
+      newErrors.emergencyContact = "Emergency Contact is required";
+    if (!formData.admissionDate)
+      newErrors.admissionDate = "Admission Date is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+
+      const payload = new FormData();
+      for (const key in formData) {
+        payload.append(key, formData[key]);
+      }
+      if (imageFile) payload.append("image", imageFile);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/students/create`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setSuccessMessage(response.data.message || "Student added successfully!");
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      setErrorMessage(
+        err.response?.data?.message || "Failed to add student. Try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
-      fullName: '',
-      studentClass: '',
-      rollNumber: '',
-      dob: '',
-      studentWhatsapp: '',
-      studentCell: '',
-      bForm: '',
-      gender: '',
-      nationality: 'PAKISTANI',
-      fatherCnic: '',
-      parentsWhatsapp: '',
-      parentsCell: '',
-      fatherName: '',
-      motherName: '',
-      parentEmail: '',
-      address: '',
-      emergencyContact: '',
-      admissionDate: '',
-      batchNo: '25',
-      schoolName: '',
-      referralSource: '',
-      note: '',
+      fullName: "",
+      studentClass: "",
+      rollNumber: "",
+      dob: "",
+      studentWhatsapp: "",
+      studentCell: "",
+      bForm: "",
+      gender: "",
+      nationality: "PAKISTANI",
+      fatherCnic: "",
+      parentsWhatsapp: "",
+      parentsCell: "",
+      fatherName: "",
+      motherName: "",
+      parentEmail: "",
+      address: "",
+      emergencyContact: "",
+      admissionDate: "",
+      batchNo: "25",
+      schoolName: "",
+      referralSource: "",
+      note: "",
     });
     setImagePreview(null);
-    setActiveStep(0);
+    setImageFile(null);
     setErrors({});
+    setActiveStep(0);
   };
 
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
-  return (
+        return (
           <Grid container spacing={3}>
-            <Grid item xs={12} sx={{ textAlign: 'center', mb: 3 }}>
-              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+            <Grid item xs={12} sx={{ textAlign: "center", mb: 3 }}>
+              <Box sx={{ position: "relative", display: "inline-block" }}>
                 <Avatar
                   src={imagePreview}
                   sx={{
                     width: 120,
                     height: 120,
-                    mx: 'auto',
+                    mx: "auto",
                     mb: 2,
-                    border: '4px solid',
-                    borderColor: 'primary.main',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                    border: "4px solid #00335E",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
                   }}
                 >
                   <PersonIcon sx={{ fontSize: 60 }} />
                 </Avatar>
-        <input
-          accept="image/*"
-          style={{ display: 'none' }}
-          id="student-image"
-          type="file"
-          onChange={handleImageUpload}
-        />
-        <label htmlFor="student-image">
+                <input
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  id="student-image"
+                  type="file"
+                  onChange={handleImageUpload}
+                />
+                <label htmlFor="student-image">
                   <IconButton
-            component="span"
+                    component="span"
                     sx={{
-                      position: 'absolute',
+                      position: "absolute",
                       bottom: 0,
                       right: 0,
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
+                      backgroundColor: "#C99228",
+                      color: "white",
+                      "&:hover": { backgroundColor: "#b3821f" },
                     }}
                   >
                     <CloudUploadIcon />
                   </IconButton>
-        </label>
-      </Box>
+                </label>
+              </Box>
             </Grid>
-      
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Student Full Name"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              required
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Student Full Name"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                required
                 error={!!errors.fullName}
                 helperText={errors.fullName}
-                InputProps={{
-                  startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />,
-                }}
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth required error={!!errors.studentClass}>
                 <InputLabel>Class</InputLabel>
                 <Select
-              name="studentClass"
-              value={formData.studentClass}
-              onChange={(e) => {
-                handleInputChange(e);
-                generateRollNumber();
-              }}
+                  name="studentClass"
+                  value={formData.studentClass}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    generateRollNumber();
+                  }}
                   label="Class"
-            >
-              <MenuItem value="">Select Class</MenuItem>
-              <MenuItem value="6">Class 6</MenuItem>
-              <MenuItem value="7">Class 7</MenuItem>
-              <MenuItem value="8">Class 8</MenuItem>
-              <MenuItem value="9">Class 9</MenuItem>
-              <MenuItem value="10">Class 10</MenuItem>
-                  <MenuItem value="11">Class 11</MenuItem>
-                  <MenuItem value="12">Class 12</MenuItem>
+                >
+                  {[6, 7, 8, 9, 10, 11, 12].map((c) => (
+                    <MenuItem key={c} value={c}>
+                      Class {c}
+                    </MenuItem>
+                  ))}
                 </Select>
-                {errors.studentClass && <FormHelperText>{errors.studentClass}</FormHelperText>}
+                {errors.studentClass && (
+                  <FormHelperText>{errors.studentClass}</FormHelperText>
+                )}
               </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Roll Number"
-              name="rollNumber"
-              value={formData.rollNumber}
-              onChange={handleInputChange}
-              InputProps={{
-                readOnly: true,
-                  startAdornment: <SchoolIcon sx={{ mr: 1, color: 'action.active' }} />,
-              }}
-                helperText="Auto-generated based on class"
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Date of Birth"
-              name="dob"
-              type="date"
-              value={formData.dob}
-              onChange={handleInputChange}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Roll Number"
+                name="rollNumber"
+                value={formData.rollNumber}
+                InputProps={{ readOnly: true }}
+                helperText="Auto-generated"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                name="dob"
+                type="date"
+                value={formData.dob}
+                onChange={handleInputChange}
                 required
                 error={!!errors.dob}
                 helperText={errors.dob}
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required error={!!errors.gender}>
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleInputChange}
-                  label="Gender"
-                >
-                  <MenuItem value="">Select Gender</MenuItem>
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                  <MenuItem value="Other">Other</MenuItem>
-                </Select>
-                {errors.gender && <FormHelperText>{errors.gender}</FormHelperText>}
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="B-Form Number"
-                name="bForm"
-                value={formData.bForm}
-                onChange={handleInputChange}
-                required
-                error={!!errors.bForm}
-                helperText={errors.bForm}
-              />
-            </Grid>
           </Grid>
         );
-      
       case 1:
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <ContactPhoneIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, display: "flex", alignItems: "center" }}
+              >
+                <ContactPhoneIcon sx={{ mr: 1, color: "#C99228" }} />
                 Contact Information
               </Typography>
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Student WhatsApp"
-                name="studentWhatsapp"
-                value={formData.studentWhatsapp}
-                onChange={handleInputChange}
-                type="tel"
-                error={!!errors.studentWhatsapp}
-                helperText={errors.studentWhatsapp}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Student Cell Phone"
-                name="studentCell"
-                value={formData.studentCell}
-                onChange={handleInputChange}
-                type="tel"
-                error={!!errors.studentCell}
-                helperText={errors.studentCell}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <HomeIcon sx={{ mr: 1, color: 'primary.main' }} />
-                Address Information
-              </Typography>
-            </Grid>
-            
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -357,7 +328,6 @@ const AddStudentForm = () => {
                 helperText={errors.address}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -365,13 +335,11 @@ const AddStudentForm = () => {
                 name="emergencyContact"
                 value={formData.emergencyContact}
                 onChange={handleInputChange}
-                type="tel"
                 required
                 error={!!errors.emergencyContact}
                 helperText={errors.emergencyContact}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -388,17 +356,18 @@ const AddStudentForm = () => {
             </Grid>
           </Grid>
         );
-      
       case 2:
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <PersonIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, display: "flex", alignItems: "center" }}
+              >
+                <PersonIcon sx={{ mr: 1, color: "#C99228" }} />
                 Parent Information
               </Typography>
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -411,7 +380,6 @@ const AddStudentForm = () => {
                 helperText={errors.fatherName}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -424,73 +392,20 @@ const AddStudentForm = () => {
                 helperText={errors.motherName}
               />
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Father's CNIC"
-                name="fatherCnic"
-                value={formData.fatherCnic}
-                onChange={handleInputChange}
-                required
-                error={!!errors.fatherCnic}
-                helperText={errors.fatherCnic}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Parent Email"
-                name="parentEmail"
-                type="email"
-                value={formData.parentEmail}
-                onChange={handleInputChange}
-                error={!!errors.parentEmail}
-                helperText={errors.parentEmail}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Parent WhatsApp"
-                name="parentsWhatsapp"
-                value={formData.parentsWhatsapp}
-                onChange={handleInputChange}
-                type="tel"
-                required
-                error={!!errors.parentsWhatsapp}
-                helperText={errors.parentsWhatsapp}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Parent Cell Phone"
-                name="parentsCell"
-                value={formData.parentsCell}
-                onChange={handleInputChange}
-                type="tel"
-                required
-                error={!!errors.parentsCell}
-                helperText={errors.parentsCell}
-              />
-            </Grid>
           </Grid>
         );
-      
       case 3:
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <SchoolIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, display: "flex", alignItems: "center" }}
+              >
+                <SchoolIcon sx={{ mr: 1, color: "#C99228" }} />
                 Additional Information
               </Typography>
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -500,7 +415,6 @@ const AddStudentForm = () => {
                 onChange={handleInputChange}
               />
             </Grid>
-            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -510,82 +424,40 @@ const AddStudentForm = () => {
                 onChange={handleInputChange}
               />
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Batch Number"
-                name="batchNo"
-                value={formData.batchNo}
-                onChange={handleInputChange}
-              required
-            />
-          </Grid>
-          
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Nationality</InputLabel>
-                <Select
-                  name="nationality"
-                  value={formData.nationality}
-                  onChange={handleInputChange}
-                  label="Nationality"
-                >
-                  <MenuItem value="PAKISTANI">Pakistani</MenuItem>
-                  <MenuItem value="OTHER">Other</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          
-          <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Additional Notes"
-                name="note"
-                value={formData.note}
-                onChange={handleInputChange}
-                multiline
-                rows={4}
-                placeholder="Any additional information about the student..."
-              />
-            </Grid>
           </Grid>
         );
-      
       default:
-        return 'Unknown step';
+        return null;
     }
   };
 
   return (
     <Box>
-      {/* Header */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700,
-                color: '#00335E',
-              }}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "#00335E" }}
             >
               Add New Student
             </Typography>
             <Chip
               icon={<CheckCircleIcon />}
               label={`Step ${activeStep + 1} of ${steps.length}`}
-              color="primary"
-              variant="outlined"
+              sx={{ backgroundColor: "#00335E", color: "#fff" }}
             />
           </Box>
-          <Typography variant="body1" color="text.secondary">
-            Complete all steps to register a new student in the system
-          </Typography>
         </CardContent>
       </Card>
 
-      {/* Stepper */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Stepper activeStep={activeStep} alternativeLabel>
@@ -598,14 +470,11 @@ const AddStudentForm = () => {
         </CardContent>
       </Card>
 
-      {/* Form Content */}
       <Card>
         <CardContent sx={{ p: 4 }}>
           <form onSubmit={handleSubmit}>
             {renderStepContent(activeStep)}
-            
-            {/* Navigation Buttons */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
               <Button
                 disabled={activeStep === 0}
                 onClick={handleBack}
@@ -614,8 +483,7 @@ const AddStudentForm = () => {
               >
                 Back
               </Button>
-              
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <Button
                   onClick={resetForm}
                   variant="outlined"
@@ -624,17 +492,17 @@ const AddStudentForm = () => {
                 >
                   Reset
                 </Button>
-                
                 {activeStep === steps.length - 1 ? (
                   <Button
                     type="submit"
                     variant="contained"
-                    startIcon={<SaveIcon />}
+                    disabled={loading}
+                    startIcon={
+                      loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />
+                    }
                     sx={{
-                      background: 'linear-gradient(135deg, #00335E 0%, #1a4a73 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #002244 0%, #00335E 100%)',
-                      },
+                      background: "#00335E",
+                      "&:hover": { background: "#002244" },
                     }}
                   >
                     Save Student
@@ -644,10 +512,8 @@ const AddStudentForm = () => {
                     variant="contained"
                     onClick={handleNext}
                     sx={{
-                      background: 'linear-gradient(135deg, #00335E 0%, #1a4a73 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #002244 0%, #00335E 100%)',
-                      },
+                      background: "#00335E",
+                      "&:hover": { background: "#002244" },
                     }}
                   >
                     Next
@@ -655,21 +521,18 @@ const AddStudentForm = () => {
                 )}
               </Box>
             </Box>
-      </form>
+          </form>
         </CardContent>
       </Card>
-      
+
       {successMessage && (
-        <Alert 
-          severity="success" 
-          sx={{ mt: 3 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => setSuccessMessage('')}>
-              Close
-            </Button>
-          }
-        >
+        <Alert severity="success" sx={{ mt: 3 }}>
           {successMessage}
+        </Alert>
+      )}
+      {errorMessage && (
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {errorMessage}
         </Alert>
       )}
     </Box>

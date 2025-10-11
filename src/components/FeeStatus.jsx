@@ -1,5 +1,5 @@
 // components/FeeStatus.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -13,66 +13,55 @@ import {
   TableRow,
   Paper,
   Chip,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
+  IconButton,
+  Grid,
   FormControl,
   InputLabel,
-  Grid,
-  IconButton,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+
+const API_BASE_URL = 'http://localhost:3001/api';
 
 const FeeStatus = () => {
+  const [feesData, setFeesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterClass, setFilterClass] = useState('all');
 
-  // Mock data - replace with actual API calls
-  const mockFeeData = [
-    {
-      id: 1,
-      studentName: 'John Doe',
-      rollNumber: '2024001',
-      class: '10th',
-      section: 'A',
-      totalFees: 50000,
-      paidFees: 45000,
-      pendingFees: 5000,
-      status: 'Partial',
-      lastPaymentDate: '2024-01-15',
-      dueDate: '2024-03-15',
-    },
-    {
-      id: 2,
-      studentName: 'Jane Smith',
-      rollNumber: '2024002',
-      class: '9th',
-      section: 'B',
-      totalFees: 45000,
-      paidFees: 45000,
-      pendingFees: 0,
-      status: 'Paid',
-      lastPaymentDate: '2024-01-20',
-      dueDate: '2024-03-20',
-    },
-    {
-      id: 3,
-      studentName: 'Mike Johnson',
-      rollNumber: '2024003',
-      class: '11th',
-      section: 'A',
-      totalFees: 55000,
-      paidFees: 0,
-      pendingFees: 55000,
-      status: 'Pending',
-      lastPaymentDate: null,
-      dueDate: '2024-03-25',
-    },
-  ];
+  const fetchFeeData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/fees`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch fee data');
+      const data = await res.json();
+      setFeesData(data);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeeData();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -100,14 +89,14 @@ const FeeStatus = () => {
     }
   };
 
-  const filteredData = mockFeeData.filter(student => {
+  const filteredData = feesData.filter((student) => {
     const statusMatch = filterStatus === 'all' || student.status === filterStatus;
     const classMatch = filterClass === 'all' || student.class === filterClass;
     return statusMatch && classMatch;
   });
 
-  const totalRevenue = mockFeeData.reduce((sum, student) => sum + student.paidFees, 0);
-  const totalPending = mockFeeData.reduce((sum, student) => sum + student.pendingFees, 0);
+  const totalRevenue = feesData.reduce((sum, student) => sum + student.paidFees, 0);
+  const totalPending = feesData.reduce((sum, student) => sum + student.pendingFees, 0);
 
   return (
     <Box className="space-y-6">
@@ -130,7 +119,7 @@ const FeeStatus = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} md={4}>
           <Card sx={{ backgroundColor: 'rgba(220, 38, 38, 0.1)', border: '1px solid rgba(220, 38, 38, 0.2)' }}>
             <CardContent>
@@ -148,7 +137,7 @@ const FeeStatus = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} md={4}>
           <Card sx={{ backgroundColor: 'rgba(0, 51, 94, 0.1)', border: '1px solid rgba(0, 51, 94, 0.2)' }}>
             <CardContent>
@@ -158,7 +147,7 @@ const FeeStatus = () => {
                     Total Students
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700, color: '#002244' }}>
-                    {mockFeeData.length}
+                    {feesData.length}
                   </Typography>
                 </Box>
                 <ReceiptIcon sx={{ color: '#00335E', fontSize: 40 }} />
@@ -171,10 +160,9 @@ const FeeStatus = () => {
       {/* Filters */}
       <Card>
         <CardContent>
-          <Typography variant="h5" className="mb-4 text-primary-main">
+          <Typography variant="h5" sx={{ mb: 3, color: '#00335E', fontWeight: 600 }}>
             Fee Status Management
           </Typography>
-          
           <Box className="flex gap-4 items-center">
             <FormControl className="min-w-40">
               <InputLabel>Status</InputLabel>
@@ -189,7 +177,7 @@ const FeeStatus = () => {
                 <MenuItem value="Pending">Pending</MenuItem>
               </Select>
             </FormControl>
-            
+
             <FormControl className="min-w-40">
               <InputLabel>Class</InputLabel>
               <Select
@@ -208,90 +196,93 @@ const FeeStatus = () => {
         </CardContent>
       </Card>
 
-      {/* Fee Status Table */}
+      {/* Table */}
       <Card>
         <CardContent>
-          <Typography variant="h6" className="mb-4">
+          <Typography variant="h6" sx={{ mb: 2 }}>
             Student Fee Status
           </Typography>
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow className="bg-gray-50">
-                  <TableCell>Student</TableCell>
-                  <TableCell>Class</TableCell>
-                  <TableCell>Total Fees</TableCell>
-                  <TableCell>Paid</TableCell>
-                  <TableCell>Pending</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Due Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.map((student) => (
-                  <TableRow key={student.id} hover>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="subtitle2" className="font-semibold">
-                          {student.studentName}
-                        </Typography>
-                        <Typography variant="caption" className="text-gray-500">
-                          {student.rollNumber}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{student.class} - {student.section}</TableCell>
-                    <TableCell>₹{student.totalFees.toLocaleString()}</TableCell>
-                    <TableCell>₹{student.paidFees.toLocaleString()}</TableCell>
-                    <TableCell>₹{student.pendingFees.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={getStatusIcon(student.status)}
-                        label={student.status}
-                        color={getStatusColor(student.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{student.dueDate}</TableCell>
-                    <TableCell>
-                      <Box className="flex gap-1">
-                        <IconButton
-                          size="small"
-                          className="text-blue-600"
-                          title="View Details"
-                        >
-                          <ReceiptIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          className="text-green-600"
-                          title="Record Payment"
-                        >
-                          <PaymentIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          className="text-gray-600"
-                          title="Print Receipt"
-                        >
-                          <PrintIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          className="text-purple-600"
-                          title="Download Report"
-                        >
-                          <DownloadIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6, color: 'error.main' }}>
+              <ErrorOutlineIcon sx={{ mr: 1 }} />
+              <Typography>{error}</Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableCell>Student</TableCell>
+                    <TableCell>Class</TableCell>
+                    <TableCell>Total Fees</TableCell>
+                    <TableCell>Paid</TableCell>
+                    <TableCell>Pending</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Due Date</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {filteredData.map((student) => (
+                    <TableRow key={student._id || student.id} hover>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {student.studentName}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {student.rollNumber}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{student.class} - {student.section}</TableCell>
+                      <TableCell>₹{student.totalFees.toLocaleString()}</TableCell>
+                      <TableCell>₹{student.paidFees.toLocaleString()}</TableCell>
+                      <TableCell>₹{student.pendingFees.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Chip
+                          icon={getStatusIcon(student.status)}
+                          label={student.status}
+                          color={getStatusColor(student.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{student.dueDate}</TableCell>
+                      <TableCell>
+                        <Box className="flex gap-1">
+                          <Tooltip title="View Details">
+                            <IconButton size="small" className="text-blue-600">
+                              <ReceiptIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Record Payment">
+                            <IconButton size="small" className="text-green-600">
+                              <PaymentIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Print Receipt">
+                            <IconButton size="small" className="text-gray-600">
+                              <PrintIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Download Report">
+                            <IconButton size="small" className="text-purple-600">
+                              <DownloadIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
     </Box>

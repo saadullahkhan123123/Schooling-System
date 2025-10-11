@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Tabs,
   Tab,
@@ -8,47 +8,90 @@ import {
   Typography,
   Checkbox,
   TextField,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { motion } from "framer-motion";
-
-const studentsMock = [
-  { id: 1, name: "John Doe" },
-  { id: 2, name: "Jane Smith" },
-  { id: 3, name: "Michael Johnson" },
-  { id: 4, name: "Emily Davis" },
-  { id: 5, name: "Daniel Lee" },
-];
+import axios from "axios";
 
 export default function Attendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
   const [attendance, setAttendance] = useState({});
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
+  const token = localStorage.getItem("token");
+
+  // ✅ Fetch students from API
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get("http://localhost:5000/api/students", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setStudents(res.data || []);
+      } catch (error) {
+        console.error("Error fetching students:", error);
+        setMessage("Failed to load students.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [token]);
+
+  // ✅ Mark or unmark single student
   const handleAttendanceToggle = (id) => {
     setAttendance((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // ✅ Mark all present or clear all
   const markAll = (status) => {
     const updated = {};
     filteredStudents.forEach((student) => {
-      updated[student.id] = status;
+      updated[student._id] = status;
     });
     setAttendance(updated);
   };
 
-  const filteredStudents = studentsMock.filter((student) =>
-    student.name.toLowerCase().includes(search.toLowerCase())
+  // ✅ Filter students by search
+  const filteredStudents = students.filter((student) =>
+    student.fullName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSaveAttendance = () => {
-    console.log("Attendance Data:", attendance);
-    alert("Attendance saved successfully!");
+  // ✅ Save attendance to API
+  const handleSaveAttendance = async () => {
+    try {
+      const attendanceData = filteredStudents.map((student) => ({
+        studentId: student._id,
+        status: attendance[student._id] ? "Present" : "Absent",
+      }));
+
+      await axios.post(
+        "http://localhost:5000/api/attendance/mark",
+        { attendance: attendanceData },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setMessage("✅ Attendance saved successfully!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+      setMessage("❌ Failed to save attendance.");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
-      <Typography variant="h4" className="text-[#0F406A] font-bold mb-6">
+      <Typography
+        variant="h4"
+        sx={{ color: "#00335E", fontWeight: "bold", mb: 4 }}
+      >
         Attendance Management
       </Typography>
 
@@ -56,11 +99,26 @@ export default function Attendance() {
       <Tabs
         value={activeTab}
         onChange={(e, val) => setActiveTab(val)}
-        sx={{ marginBottom: 3 }}
+        sx={{
+          marginBottom: 3,
+          "& .MuiTab-root": { color: "#00335E" },
+          "& .Mui-selected": { color: "#C99228" },
+          "& .MuiTabs-indicator": { backgroundColor: "#C99228" },
+        }}
       >
-        <Tab label="Mark Attendance" sx={{ color: "#0F406A" }} />
-        <Tab label="Attendance Report" sx={{ color: "#0F406A" }} />
+        <Tab label="Mark Attendance" />
+        <Tab label="Attendance Report" />
       </Tabs>
+
+      {/* Alert Message */}
+      {message && (
+        <Alert
+          severity={message.includes("✅") ? "success" : "error"}
+          sx={{ mb: 3 }}
+        >
+          {message}
+        </Alert>
+      )}
 
       {/* Tab 1: Mark Attendance */}
       {activeTab === 0 && (
@@ -82,14 +140,14 @@ export default function Attendance() {
               <Button
                 variant="contained"
                 onClick={() => markAll(true)}
-                sx={{ backgroundColor: "#C89127" }}
+                sx={{ backgroundColor: "#C99228" }}
               >
                 Mark All Present
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => markAll(false)}
-                sx={{ color: "#C89127", borderColor: "#C89127" }}
+                sx={{ color: "#C99228", borderColor: "#C99228" }}
               >
                 Clear All
               </Button>
@@ -99,30 +157,36 @@ export default function Attendance() {
           {/* Student List */}
           <Card className="shadow-xl rounded-2xl">
             <CardContent>
-              <div className="space-y-4">
-                {filteredStudents.length === 0 ? (
-                  <Typography>No students found.</Typography>
-                ) : (
-                  filteredStudents.map((student) => (
-                    <div
-                      key={student.id}
-                      className="flex justify-between items-center p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                    >
-                      <Typography className="font-medium text-gray-800">
-                        {student.name}
-                      </Typography>
-                      <Checkbox
-                        checked={attendance[student.id] || false}
-                        onChange={() => handleAttendanceToggle(student.id)}
-                        sx={{
-                          color: "#C89127",
-                          "&.Mui-checked": { color: "#C89127" },
-                        }}
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
+              {loading ? (
+                <div className="flex justify-center p-6">
+                  <CircularProgress sx={{ color: "#00335E" }} />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredStudents.length === 0 ? (
+                    <Typography>No students found.</Typography>
+                  ) : (
+                    filteredStudents.map((student) => (
+                      <div
+                        key={student._id}
+                        className="flex justify-between items-center p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                      >
+                        <Typography className="font-medium text-gray-800">
+                          {student.fullName}
+                        </Typography>
+                        <Checkbox
+                          checked={attendance[student._id] || false}
+                          onChange={() => handleAttendanceToggle(student._id)}
+                          sx={{
+                            color: "#C99228",
+                            "&.Mui-checked": { color: "#C99228" },
+                          }}
+                        />
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -130,21 +194,27 @@ export default function Attendance() {
           <Button
             variant="contained"
             onClick={handleSaveAttendance}
-            sx={{ backgroundColor: "#0F406A", paddingX: 4 }}
+            sx={{
+              backgroundColor: "#00335E",
+              px: 4,
+              "&:hover": { backgroundColor: "#002244" },
+            }}
           >
             Save Attendance
           </Button>
         </motion.div>
       )}
 
-      {/* Tab 2: Attendance Report */}
+      {/* Tab 2: Attendance Report (Future) */}
       {activeTab === 1 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-gray-700"
         >
-          <Typography variant="h6">Attendance Report Coming Soon...</Typography>
+          <Typography variant="h6">
+            Attendance Report Coming Soon...
+          </Typography>
         </motion.div>
       )}
     </div>

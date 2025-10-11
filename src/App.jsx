@@ -1,29 +1,39 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Homework from './components/Homework';
-import LoginPage from './components/LoginPage';
-import Dashboard from './components/Dashboard'; // we will create a simple Dashboard
-import Profile from './components/Profile'; // optional profile page
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import LoginPage from "./components/LoginPage";
+import Dashboard from "./components/Dashboard";
+import Homework from "./components/Homework";
+import FeeStatus from "./components/FeeStatus";
+import Attendance from "./components/Attendance";
+import AddStudentForm from "./components/AddStudentForm";
+import SearchStudent from "./components/SearchStudent";
+import Profile from "./components/Profile";
 
-// Protected route component
+// ✅ Protected Route Component
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" replace />;
 };
 
 const App = () => {
+  const isAuthenticated = !!localStorage.getItem("token");
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col bg-gray-50">
-        {/* Navbar visible only on private routes */}
-        {localStorage.getItem('token') && <Navbar />}
+        {/* ✅ Navbar only after login */}
+        {isAuthenticated && <Navbar />}
 
-        <div className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-4 md:p-6">
           <Routes>
-            <Route path="/login" element={<LoginPage onLogin={() => window.location.reload()} />} />
-            
-            {/* Private routes */}
+            {/* 🔐 Public Route */}
+            <Route
+              path="/login"
+              element={<LoginPage onLogin={() => window.location.reload()} />}
+            />
+
+            {/* 🏠 Dashboard */}
             <Route
               path="/dashboard"
               element={
@@ -32,6 +42,18 @@ const App = () => {
                 </PrivateRoute>
               }
             />
+
+            {/* 🧑 Add Student */}
+            <Route
+              path="/add-student"
+              element={
+                <PrivateRoute>
+                  <AddStudentForm />
+                </PrivateRoute>
+              }
+            />
+
+            {/* 📚 Homework */}
             <Route
               path="/homework"
               element={
@@ -40,6 +62,38 @@ const App = () => {
                 </PrivateRoute>
               }
             />
+
+            {/* 💰 Fee Status */}
+            <Route
+              path="/fees"
+              element={
+                <PrivateRoute>
+                  <FeeStatus />
+                </PrivateRoute>
+              }
+            />
+
+            {/* 📅 Attendance */}
+            <Route
+              path="/attendance"
+              element={
+                <PrivateRoute>
+                  <Attendance />
+                </PrivateRoute>
+              }
+            />
+
+            {/* 🔍 Search Student */}
+            <Route
+              path="/search-student"
+              element={
+                <PrivateRoute>
+                  <SearchStudent />
+                </PrivateRoute>
+              }
+            />
+
+            {/* 👤 Profile */}
             <Route
               path="/profile"
               element={
@@ -49,10 +103,18 @@ const App = () => {
               }
             />
 
-            {/* Redirect unknown routes */}
-            <Route path="*" element={<Navigate to={localStorage.getItem('token') ? "/dashboard" : "/login"} replace />} />
+            {/* 🚪 Redirect unknown routes */}
+            <Route
+              path="*"
+              element={
+                <Navigate
+                  to={isAuthenticated ? "/dashboard" : "/login"}
+                  replace
+                />
+              }
+            />
           </Routes>
-        </div>
+        </main>
       </div>
     </Router>
   );

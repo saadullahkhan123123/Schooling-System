@@ -18,83 +18,77 @@ import {
   IconButton,
   InputAdornment,
   Avatar,
+  CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
+const API_BASE_URL = 'http://localhost:3001/api';
+
 const SearchStudent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Mock data - replace with actual API calls
-  const mockStudents = [
-    {
-      id: 1,
-      name: 'John Doe',
-      rollNumber: '2024001',
-      class: '10th',
-      section: 'A',
-      phone: '+1234567890',
-      email: 'john.doe@email.com',
-      status: 'Active',
-      admissionDate: '2024-01-15',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      rollNumber: '2024002',
-      class: '9th',
-      section: 'B',
-      phone: '+1234567891',
-      email: 'jane.smith@email.com',
-      status: 'Active',
-      admissionDate: '2024-01-20',
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      rollNumber: '2024003',
-      class: '11th',
-      section: 'A',
-      phone: '+1234567892',
-      email: 'mike.johnson@email.com',
-      status: 'Inactive',
-      admissionDate: '2024-01-25',
-    },
-  ];
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+  };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return;
     setIsSearching(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      const results = mockStudents.filter(student =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.rollNumber.includes(searchTerm) ||
-        student.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    setSearchResults([]);
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/students/search?query=${encodeURIComponent(searchTerm)}`,
+        {
+          headers: getAuthHeaders(),
+        }
       );
-      setSearchResults(results);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Search failed');
+
+      setSearchResults(data.students || []);
+    } catch (err) {
+      console.error('Search error:', err);
+      setSearchResults([]);
+    } finally {
       setIsSearching(false);
-    }, 1000);
+    }
   };
 
   const handleView = (student) => {
-    console.log('View student:', student);
-    // Implement view functionality
+    console.log('📄 View student:', student);
+    // TODO: navigate to view page or open modal
   };
 
   const handleEdit = (student) => {
-    console.log('Edit student:', student);
-    // Implement edit functionality
+    console.log('✏️ Edit student:', student);
+    // TODO: navigate to edit form or open modal
   };
 
-  const handleDelete = (student) => {
-    console.log('Delete student:', student);
-    // Implement delete functionality
+  const handleDelete = async (student) => {
+    if (!window.confirm(`Are you sure you want to delete ${student.name}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/students/${student._id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Delete failed');
+
+      setSearchResults((prev) => prev.filter((s) => s._id !== student._id));
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -108,13 +102,7 @@ const SearchStudent = () => {
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <SearchIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700,
-                color: '#00335E',
-              }}
-            >
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#00335E' }}>
               Search Students
             </Typography>
           </Box>
@@ -124,7 +112,7 @@ const SearchStudent = () => {
         </CardContent>
       </Card>
 
-      {/* Search Section */}
+      {/* Search Bar */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'end' }}>
@@ -144,7 +132,7 @@ const SearchStudent = () => {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
-                }
+                },
               }}
             />
             <Button
@@ -160,19 +148,20 @@ const SearchStudent = () => {
                 },
                 '&:disabled': {
                   background: 'rgba(0, 0, 0, 0.12)',
-                }
+                },
               }}
             >
-              {isSearching ? 'Searching...' : 'Search'}
+              {isSearching ? <CircularProgress size={22} color="inherit" /> : 'Search'}
             </Button>
           </Box>
         </CardContent>
       </Card>
 
+      {/* Results */}
       {searchResults.length > 0 && (
         <Card>
           <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Search Results
               </Typography>
@@ -183,7 +172,7 @@ const SearchStudent = () => {
                 sx={{ fontWeight: 600 }}
               />
             </Box>
-            
+
             <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
               <Table>
                 <TableHead>
@@ -200,20 +189,20 @@ const SearchStudent = () => {
                 </TableHead>
                 <TableBody>
                   {searchResults.map((student) => (
-                    <TableRow 
-                      key={student.id} 
+                    <TableRow
+                      key={student._id}
                       hover
-                      sx={{ 
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        }
-                      }}
+                      sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
                     >
                       <TableCell sx={{ fontWeight: 500 }}>{student.rollNumber}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar sx={{ width: 32, height: 32, mr: 2, fontSize: '0.875rem' }}>
-                            {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          <Avatar sx={{ width: 32, height: 32, mr: 2 }}>
+                            {student.name
+                              ?.split(' ')
+                              .map((n) => n[0])
+                              .join('')
+                              .toUpperCase()}
                           </Avatar>
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {student.name}
@@ -237,9 +226,10 @@ const SearchStudent = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleView(student)}
-                            sx={{ 
+                            disabled={isSearching}
+                            sx={{
                               color: 'primary.main',
-                              '&:hover': { backgroundColor: 'primary.light', color: 'white' }
+                              '&:hover': { backgroundColor: 'primary.light', color: 'white' },
                             }}
                           >
                             <VisibilityIcon fontSize="small" />
@@ -247,9 +237,10 @@ const SearchStudent = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleEdit(student)}
-                            sx={{ 
+                            disabled={isSearching}
+                            sx={{
                               color: 'success.main',
-                              '&:hover': { backgroundColor: 'success.light', color: 'white' }
+                              '&:hover': { backgroundColor: 'success.light', color: 'white' },
                             }}
                           >
                             <EditIcon fontSize="small" />
@@ -257,9 +248,10 @@ const SearchStudent = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleDelete(student)}
-                            sx={{ 
+                            disabled={isSearching}
+                            sx={{
                               color: 'error.main',
-                              '&:hover': { backgroundColor: 'error.light', color: 'white' }
+                              '&:hover': { backgroundColor: 'error.light', color: 'white' },
                             }}
                           >
                             <DeleteIcon fontSize="small" />
@@ -275,6 +267,7 @@ const SearchStudent = () => {
         </Card>
       )}
 
+      {/* Empty State */}
       {searchTerm && searchResults.length === 0 && !isSearching && (
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 8 }}>

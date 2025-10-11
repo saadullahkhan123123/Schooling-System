@@ -1,69 +1,166 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Grid, CircularProgress, Fade } from '@mui/material';
-import { CheckCircle, Pending, Bookmark } from '@mui/icons-material';
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  CircularProgress,
+  Fade,
+} from "@mui/material";
+import {
+  CheckCircle as ActiveIcon,
+  Pending as PendingIcon,
+  Bookmark as DoneIcon,
+  People as StudentIcon,
+  CurrencyExchange as FeeIcon,
+  MenuBook as HomeworkIcon,
+} from "@mui/icons-material";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({ active: 0, pending: 0, done: 0 });
+  const [stats, setStats] = useState({
+    active: 0,
+    pending: 0,
+    done: 0,
+    totalStudents: 0,
+    totalFees: 0,
+    totalHomework: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = "http://localhost:3001/api";
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     };
   };
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/homework/stats`, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      const data = await res.json();
-      setStats(data);
+      // 🧮 Fetch homework stats
+      const hwRes = await fetch(`${API_BASE_URL}/homework/stats`, {
+        headers: getAuthHeaders(),
+      });
+      if (!hwRes.ok) throw new Error("Failed to fetch homework stats");
+      const hwData = await hwRes.json();
+
+      // 👨‍🎓 Fetch total students
+      const studentsRes = await fetch(`${API_BASE_URL}/students/count`, {
+        headers: getAuthHeaders(),
+      });
+      if (!studentsRes.ok) throw new Error("Failed to fetch student stats");
+      const studentsData = await studentsRes.json();
+
+      // 💰 Fetch fee stats
+      const feeRes = await fetch(`${API_BASE_URL}/fees/total`, {
+        headers: getAuthHeaders(),
+      });
+      if (!feeRes.ok) throw new Error("Failed to fetch fee stats");
+      const feeData = await feeRes.json();
+
+      setStats({
+        active: hwData.active || 0,
+        pending: hwData.pending || 0,
+        done: hwData.done || 0,
+        totalStudents: studentsData.count || 0,
+        totalFees: feeData.total || 0,
+        totalHomework: hwData.total || 0,
+      });
     } catch (err) {
+      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   const statCards = [
-    { title: 'Active', value: stats.active, icon: <CheckCircle fontSize="large" />, color: '#00335E' },
-    { title: 'Pending', value: stats.pending, icon: <Pending fontSize="large" />, color: '#C99228' },
-    { title: 'Done', value: stats.done, icon: <Bookmark fontSize="large" />, color: '#3CB371' }, // optional green for done
+    {
+      title: "Active Homework",
+      value: stats.active,
+      icon: <ActiveIcon fontSize="large" />,
+      color: "#00335E",
+    },
+    {
+      title: "Pending Homework",
+      value: stats.pending,
+      icon: <PendingIcon fontSize="large" />,
+      color: "#C99228",
+    },
+    {
+      title: "Completed Homework",
+      value: stats.done,
+      icon: <DoneIcon fontSize="large" />,
+      color: "#3CB371",
+    },
+    {
+      title: "Total Students",
+      value: stats.totalStudents,
+      icon: <StudentIcon fontSize="large" />,
+      color: "#00335E",
+    },
+    {
+      title: "Total Fees Collected",
+      value: `PKR ${stats.totalFees}`,
+      icon: <FeeIcon fontSize="large" />,
+      color: "#C99228",
+    },
+    {
+      title: "Total Homework",
+      value: stats.totalHomework,
+      icon: <HomeworkIcon fontSize="large" />,
+      color: "#00335E",
+    },
   ];
 
   return (
     <Fade in timeout={500}>
       <Box className="p-6">
-        <Typography variant="h4" className="font-bold text-[#00335E] mb-6">
+        <Typography
+          variant="h4"
+          className="font-bold mb-6"
+          sx={{ color: "#00335E" }}
+        >
           📊 Dashboard
         </Typography>
 
         {loading ? (
           <Box className="flex justify-center py-10">
-            <CircularProgress />
+            <CircularProgress sx={{ color: "#00335E" }} />
           </Box>
         ) : error ? (
           <Box className="text-red-600 text-center py-10">{error}</Box>
         ) : (
           <Grid container spacing={4}>
             {statCards.map((card) => (
-              <Grid item xs={12} md={4} key={card.title}>
-                <Card className="hover:shadow-lg transition-shadow rounded-xl">
+              <Grid item xs={12} sm={6} md={4} key={card.title}>
+                <Card className="hover:shadow-lg transition-all duration-300 rounded-xl">
                   <CardContent className="flex items-center gap-4 p-6">
-                    <Box className="text-white p-4 rounded-full" style={{ backgroundColor: card.color }}>
+                    <Box
+                      className="text-white p-4 rounded-full shadow-md"
+                      style={{ backgroundColor: card.color }}
+                    >
                       {card.icon}
                     </Box>
                     <Box>
-                      <Typography variant="h6" className="font-semibold">{card.title}</Typography>
-                      <Typography variant="h4" className="font-bold text-gray-800">{card.value}</Typography>
+                      <Typography variant="h6" className="font-semibold">
+                        {card.title}
+                      </Typography>
+                      <Typography
+                        variant="h4"
+                        className="font-bold text-gray-800"
+                      >
+                        {card.value}
+                      </Typography>
                     </Box>
                   </CardContent>
                 </Card>
