@@ -17,9 +17,11 @@
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "framer-motion": "^12.23.22",
     "jsonwebtoken": "^9.0.2",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
@@ -36,5 +38,4 @@
     "tailwindcss": "^4.1.13",
     "vite": "^7.1.2"
   }
-  
 }
