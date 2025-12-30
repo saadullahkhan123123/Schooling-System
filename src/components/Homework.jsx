@@ -11,6 +11,9 @@ import {
   School as SchoolIcon, CheckCircle as CheckCircleIcon,
   Pending as PendingIcon, Bookmark as BookmarkIcon, Close as CloseIcon
 } from '@mui/icons-material';
+import { API_BASE_URL as BASE_URL } from '../config/api';
+
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const Homework = () => {
   const [homeworkData, setHomeworkData] = useState([]);
@@ -35,8 +38,6 @@ const Homework = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserRole(user.role || 'student');
   }, []);
-
-  const API_BASE_URL = 'http://localhost:3000/api';
 
   const classes = [
     "Pre-K", "Kindergarten", "Class 1", "Class 2", "Class 3",

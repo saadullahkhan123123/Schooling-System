@@ -16,6 +16,9 @@ import {
   CurrencyExchange as FeeIcon,
   MenuBook as HomeworkIcon,
 } from "@mui/icons-material";
+import { API_BASE_URL as BASE_URL } from '../config/api';
+
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -28,8 +31,6 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const API_BASE_URL = "http://localhost:3000/api";
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");

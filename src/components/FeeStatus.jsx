@@ -27,8 +27,9 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { API_BASE_URL as BASE_URL } from '../config/api';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const FeeStatus = () => {
   const [feesData, setFeesData] = useState([]);

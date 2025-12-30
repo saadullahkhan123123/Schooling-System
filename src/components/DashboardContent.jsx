@@ -37,7 +37,8 @@ import {
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+import { API_BASE_URL as BASE_URL } from '../config/api';
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const DashboardContent = () => {
   const [isLoaded, setIsLoaded] = useState(false);

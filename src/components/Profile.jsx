@@ -25,6 +25,7 @@ import {
   Email as EmailIcon,
   Lock as LockIcon
 } from '@mui/icons-material';
+import { API_BASE_URL } from '../config/api';
 
 const Profile = () => {
   const [user, setUser] = useState({ username: '', email: '', fullName: '', profileImage: '' });
@@ -39,8 +40,6 @@ const Profile = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  const API_BASE_URL = 'http://localhost:3000';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');

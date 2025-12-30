@@ -21,7 +21,9 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import myLogo from '../assets/my_logo.jpeg';
 
-const BASE_URL = 'http://localhost:3000';
+import { API_BASE_URL } from '../config/api';
+
+const BASE_URL = API_BASE_URL;
 
 const LoginPage = () => {
   const navigate = useNavigate();   // 👈 INIT NAVIGATE
@@ -105,7 +107,7 @@ const LoginPage = () => {
       let errorMessage = err.message;
       
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        errorMessage = 'Network error: Could not connect to server. Please make sure the backend is running on http://localhost:3000';
+        errorMessage = `Network error: Could not connect to server at ${BASE_URL}. Please check your connection and ensure the backend is running.`;
       } else if (err.message.includes('CORS')) {
         errorMessage = 'CORS error: Server is blocking the request. Please check backend CORS configuration.';
       } else if (!errorMessage || errorMessage === '') {

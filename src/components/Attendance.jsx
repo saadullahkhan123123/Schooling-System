@@ -21,6 +21,9 @@ import {
 } from "@mui/material";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { API_BASE_URL as BASE_URL } from '../config/api';
+
+const API_BASE_URL = `${BASE_URL}/api`;
 
 export default function Attendance() {
   const [activeTab, setActiveTab] = useState(0);
@@ -34,7 +37,6 @@ export default function Attendance() {
   const [userId, setUserId] = useState("");
 
   const token = localStorage.getItem("token");
-  const API_BASE_URL = "http://localhost:3000/api";
 
   // ✅ Fetch attendance data based on role
   useEffect(() => {

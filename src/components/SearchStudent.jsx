@@ -25,7 +25,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+import { API_BASE_URL as BASE_URL } from '../config/api';
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const SearchStudent = () => {
   const [searchTerm, setSearchTerm] = useState('');
