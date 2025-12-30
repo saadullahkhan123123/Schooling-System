@@ -29,7 +29,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = "http://localhost:3001/api";
+  const API_BASE_URL = "http://localhost:3000/api";
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -41,39 +41,63 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     setLoading(true);
+    setError(null);
     try {
       // 🧮 Fetch homework stats
       const hwRes = await fetch(`${API_BASE_URL}/homework/stats`, {
         headers: getAuthHeaders(),
       });
-      if (!hwRes.ok) throw new Error("Failed to fetch homework stats");
+      
+      if (!hwRes.ok) {
+        if (hwRes.status === 401) {
+          throw new Error("Authentication failed. Please login again.");
+        }
+        throw new Error("Failed to fetch homework stats");
+      }
+      
       const hwData = await hwRes.json();
+      const hwStats = hwData.stats || {};
 
       // 👨‍🎓 Fetch total students
       const studentsRes = await fetch(`${API_BASE_URL}/students/count`, {
         headers: getAuthHeaders(),
       });
-      if (!studentsRes.ok) throw new Error("Failed to fetch student stats");
+      
+      if (!studentsRes.ok) {
+        if (studentsRes.status === 401) {
+          throw new Error("Authentication failed. Please login again.");
+        }
+        throw new Error("Failed to fetch student stats");
+      }
+      
       const studentsData = await studentsRes.json();
 
       // 💰 Fetch fee stats
       const feeRes = await fetch(`${API_BASE_URL}/fees/total`, {
         headers: getAuthHeaders(),
       });
-      if (!feeRes.ok) throw new Error("Failed to fetch fee stats");
-      const feeData = await feeRes.json();
+      
+      if (!feeRes.ok) {
+        if (feeRes.status === 401) {
+          throw new Error("Authentication failed. Please login again.");
+        }
+        // Fee stats might not be critical, so we'll use 0 if it fails
+        console.warn("Failed to fetch fee stats, using default value");
+      }
+      
+      const feeData = feeRes.ok ? await feeRes.json() : { total: 0 };
 
       setStats({
-        active: hwData.active || 0,
-        pending: hwData.pending || 0,
-        done: hwData.done || 0,
+        active: hwStats.activeHomeworks || 0,
+        pending: hwStats.pendingHomeworks || 0,
+        done: hwStats.doneHomeworks || 0,
         totalStudents: studentsData.count || 0,
         totalFees: feeData.total || 0,
-        totalHomework: hwData.total || 0,
+        totalHomework: hwStats.totalHomeworks || 0,
       });
     } catch (err) {
-      console.error(err);
-      setError(err.message);
+      console.error("Dashboard fetch error:", err);
+      setError(err.message || "Failed to load dashboard data. Please try again.");
     } finally {
       setLoading(false);
     }

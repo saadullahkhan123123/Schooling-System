@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3001;
+const PORT = 3000;
 const JWT_SECRET = 'your-secret-key-change-this-in-production';
 
 // Middleware

@@ -28,8 +28,15 @@ const Homework = () => {
   const [filterSubject, setFilterSubject] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userRole, setUserRole] = useState('student');
 
-  const API_BASE_URL = 'http://localhost:3001/api';
+  // Get user role
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserRole(user.role || 'student');
+  }, []);
+
+  const API_BASE_URL = 'http://localhost:3000/api';
 
   const classes = [
     "Pre-K", "Kindergarten", "Class 1", "Class 2", "Class 3",
@@ -57,16 +64,22 @@ const Homework = () => {
   const fetchHomework = async () => {
     setLoading(true);
     try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userRole = user.role || 'student';
+      
+      // Students don't need filters - they only see their class homework
       const params = new URLSearchParams({
-        class: filterClass !== 'all' ? filterClass : '',
-        subject: filterSubject !== 'all' ? filterSubject : '',
-        status: filterStatus !== 'all' ? filterStatus : '',
-        search: searchQuery
+        ...(userRole !== 'student' && {
+          class: filterClass !== 'all' ? filterClass : '',
+          subject: filterSubject !== 'all' ? filterSubject : '',
+          status: filterStatus !== 'all' ? filterStatus : '',
+        })
       });
+      
       const res = await fetch(`${API_BASE_URL}/homework?${params}`, { headers: getAuthHeaders() });
       if (!res.ok) throw new Error('Failed to fetch homework');
       const data = await res.json();
-      setHomeworkData(data.homework || []);
+      setHomeworkData(data.homeworks || data.homework || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -76,9 +89,12 @@ const Homework = () => {
 
   useEffect(() => { fetchHomework(); }, []);
   useEffect(() => {
-    const debounce = setTimeout(fetchHomework, 300);
-    return () => clearTimeout(debounce);
-  }, [filterClass, filterSubject, filterStatus, searchQuery]);
+    // Only apply filters for admin/teacher
+    if (userRole !== 'student') {
+      const debounce = setTimeout(fetchHomework, 300);
+      return () => clearTimeout(debounce);
+    }
+  }, [filterClass, filterSubject, filterStatus, searchQuery, userRole]);
 
   const handleOpenDialog = (homework = null) => {
     if (homework) {
@@ -154,18 +170,21 @@ const Homework = () => {
       <Box className="p-6">
         <Box className="flex justify-between items-center mb-6">
           <Typography variant="h4" className="font-bold text-[#00335E]">
-            📚 Homework Management
+            {userRole === 'student' ? '📚 My Homework' : '📚 Homework Management'}
           </Typography>
-          <Button
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            className="bg-[#C99228] text-white hover:bg-[#00335E] transition-colors rounded-lg px-4 py-2"
-          >
-            Add Homework
-          </Button>
+          {userRole !== 'student' && (
+            <Button
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+              className="bg-[#C99228] text-white hover:bg-[#00335E] transition-colors rounded-lg px-4 py-2"
+            >
+              Add Homework
+            </Button>
+          )}
         </Box>
 
-        {/* Filters */}
+        {/* Filters - Only for Admin/Teacher */}
+        {userRole !== 'student' && (
         <Grid container spacing={4} className="mb-6">
           <Grid item xs={12} md={3}>
             <TextField
@@ -215,6 +234,7 @@ const Homework = () => {
             </FormControl>
           </Grid>
         </Grid>
+        )}
 
         {/* Homework List */}
         {loading ? (
@@ -229,10 +249,12 @@ const Homework = () => {
                   <CardContent>
                     <Box className="flex justify-between items-start mb-2">
                       <Typography variant="h6" className="font-semibold">{hw.title}</Typography>
-                      <Box>
-                        <IconButton onClick={() => handleOpenDialog(hw)}><EditIcon /></IconButton>
-                        <IconButton onClick={() => handleDelete(hw._id)}><DeleteIcon /></IconButton>
-                      </Box>
+                      {userRole !== 'student' && (
+                        <Box>
+                          <IconButton onClick={() => handleOpenDialog(hw)}><EditIcon /></IconButton>
+                          <IconButton onClick={() => handleDelete(hw._id)}><DeleteIcon /></IconButton>
+                        </Box>
+                      )}
                     </Box>
                     <Typography className="text-gray-600 mb-3">{hw.description}</Typography>
                     <Stack spacing={1}>

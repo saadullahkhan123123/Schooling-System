@@ -10,6 +10,14 @@ import {
   TextField,
   CircularProgress,
   Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -19,37 +27,56 @@ export default function Attendance() {
   const [search, setSearch] = useState("");
   const [attendance, setAttendance] = useState({});
   const [students, setStudents] = useState([]);
+  const [studentAttendance, setStudentAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [userRole, setUserRole] = useState("student");
+  const [userId, setUserId] = useState("");
 
   const token = localStorage.getItem("token");
+  const API_BASE_URL = "http://localhost:3000/api";
 
-  // ✅ Fetch students from API
+  // ✅ Fetch attendance data based on role
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchAttendanceData = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:5000/api/students", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setStudents(res.data || []);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = user.role || 'student';
+        const id = user._id || user.id;
+        
+        setUserRole(role);
+        setUserId(id);
+
+        if (role === 'student') {
+          // Students see only their own attendance
+          const res = await axios.get(`${API_BASE_URL}/attendance/student/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setStudentAttendance(res.data.attendance || []);
+        } else {
+          // Admin/Teacher see all students for marking
+          // Note: You'll need to create an endpoint to get all students
+          // For now, we'll use a placeholder
+          setStudents([]);
+        }
       } catch (error) {
-        console.error("Error fetching students:", error);
-        setMessage("Failed to load students.");
+        console.error("Error fetching attendance data:", error);
+        setMessage("Failed to load attendance data.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudents();
+    fetchAttendanceData();
   }, [token]);
 
-  // ✅ Mark or unmark single student
+  // ✅ Mark or unmark single student (Admin/Teacher only)
   const handleAttendanceToggle = (id) => {
     setAttendance((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // ✅ Mark all present or clear all
+  // ✅ Mark all present or clear all (Admin/Teacher only)
   const markAll = (status) => {
     const updated = {};
     filteredStudents.forEach((student) => {
@@ -58,21 +85,21 @@ export default function Attendance() {
     setAttendance(updated);
   };
 
-  // ✅ Filter students by search
+  // ✅ Filter students by search (Admin/Teacher only)
   const filteredStudents = students.filter((student) =>
-    student.fullName.toLowerCase().includes(search.toLowerCase())
+    student.fullName?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ✅ Save attendance to API
+  // ✅ Save attendance to API (Admin/Teacher only)
   const handleSaveAttendance = async () => {
     try {
       const attendanceData = filteredStudents.map((student) => ({
         studentId: student._id,
-        status: attendance[student._id] ? "Present" : "Absent",
+        status: attendance[student._id] ? "present" : "absent",
       }));
 
       await axios.post(
-        "http://localhost:5000/api/attendance/mark",
+        `${API_BASE_URL}/attendance/mark`,
         { attendance: attendanceData },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -85,6 +112,20 @@ export default function Attendance() {
     }
   };
 
+  // Get status color for chips
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'present':
+        return 'success';
+      case 'absent':
+        return 'error';
+      case 'late':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -92,23 +133,25 @@ export default function Attendance() {
         variant="h4"
         sx={{ color: "#00335E", fontWeight: "bold", mb: 4 }}
       >
-        Attendance Management
+        {userRole === 'student' ? 'My Attendance' : 'Attendance Management'}
       </Typography>
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(e, val) => setActiveTab(val)}
-        sx={{
-          marginBottom: 3,
-          "& .MuiTab-root": { color: "#00335E" },
-          "& .Mui-selected": { color: "#C99228" },
-          "& .MuiTabs-indicator": { backgroundColor: "#C99228" },
-        }}
-      >
-        <Tab label="Mark Attendance" />
-        <Tab label="Attendance Report" />
-      </Tabs>
+      {/* Tabs - Only show for Admin/Teacher */}
+      {userRole !== 'student' && (
+        <Tabs
+          value={activeTab}
+          onChange={(e, val) => setActiveTab(val)}
+          sx={{
+            marginBottom: 3,
+            "& .MuiTab-root": { color: "#00335E" },
+            "& .Mui-selected": { color: "#C99228" },
+            "& .MuiTabs-indicator": { backgroundColor: "#C99228" },
+          }}
+        >
+          <Tab label="Mark Attendance" />
+          <Tab label="Attendance Report" />
+        </Tabs>
+      )}
 
       {/* Alert Message */}
       {message && (
@@ -120,8 +163,61 @@ export default function Attendance() {
         </Alert>
       )}
 
-      {/* Tab 1: Mark Attendance */}
-      {activeTab === 0 && (
+      {/* Student View - Show their own attendance */}
+      {userRole === 'student' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="shadow-xl rounded-2xl">
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center p-6">
+                  <CircularProgress sx={{ color: "#00335E" }} />
+                </div>
+              ) : studentAttendance.length === 0 ? (
+                <Typography className="text-center py-6 text-gray-500">
+                  No attendance records found.
+                </Typography>
+              ) : (
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow className="bg-gray-50">
+                        <TableCell><strong>Date</strong></TableCell>
+                        <TableCell><strong>Subject</strong></TableCell>
+                        <TableCell><strong>Status</strong></TableCell>
+                        <TableCell><strong>Remarks</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {studentAttendance.map((record, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>
+                            {new Date(record.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{record.subject || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={record.status || 'N/A'}
+                              color={getStatusColor(record.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>{record.remarks || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Admin/Teacher View - Mark Attendance */}
+      {userRole !== 'student' && activeTab === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,7 +302,7 @@ export default function Attendance() {
       )}
 
       {/* Tab 2: Attendance Report (Future) */}
-      {activeTab === 1 && (
+      {userRole !== 'student' && activeTab === 1 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

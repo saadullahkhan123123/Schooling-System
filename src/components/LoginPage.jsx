@@ -21,7 +21,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import myLogo from '../assets/my_logo.jpeg';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = 'http://localhost:3000';
 
 const LoginPage = () => {
   const navigate = useNavigate();   // 👈 INIT NAVIGATE
@@ -31,7 +31,8 @@ const LoginPage = () => {
     username: '',
     email: '',
     password: '',
-    role: 'admin',
+    role: 'student',
+    class: '',
   });
   const [alert, setAlert] = useState({ type: '', message: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -50,35 +51,69 @@ const LoginPage = () => {
 
     try {
       const endpoint = isLoginMode ? 'login' : 'register';
-      const response = await fetch(`${BASE_URL}/auth/${endpoint}`, {
+      const url = `${BASE_URL}/auth/${endpoint}`;
+      console.log('🌐 Making request to:', url);
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: formData.username,
           password: formData.password,
-          ...(isLoginMode ? {} : { email: formData.email, role: formData.role }),
+          ...(isLoginMode ? {} : { 
+            email: formData.email, 
+            role: formData.role,
+            ...(formData.role === 'student' && formData.class ? { class: formData.class } : {})
+          }),
         }),
       });
 
-      const data = await response.json();
+      // Check if response exists and is ok
+      if (!response) {
+        throw new Error('Network error: Could not connect to server. Please make sure the backend is running.');
+      }
+
+      // Try to parse JSON, but handle errors if response is not JSON
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error(`Server error: Invalid response from server. Status: ${response.status}`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Something went wrong');
+        throw new Error(data.message || data.error || `Server error: ${response.status} ${response.statusText}`);
       }
 
       if (isLoginMode) {
         localStorage.setItem('token', data.token || '');
         localStorage.setItem('user', JSON.stringify(data.user || {}));
 
-        // 👇 Redirect to Dashboard
-        navigate('/dashboard');
+        // 👇 Redirect based on role
+        const userRole = data.user?.role || 'student';
+        if (userRole === 'student') {
+          navigate('/attendance');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setAlert({ type: 'success', message: 'Registration successful! Please login.' });
         setIsLoginMode(true);
-        setFormData({ username: '', email: '', password: '', role: 'admin' });
+        setFormData({ username: '', email: '', password: '', role: 'student', class: '' });
       }
     } catch (err) {
-      setAlert({ type: 'error', message: err.message });
+      // Handle different types of errors
+      let errorMessage = err.message;
+      
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Network error: Could not connect to server. Please make sure the backend is running on http://localhost:3000';
+      } else if (err.message.includes('CORS')) {
+        errorMessage = 'CORS error: Server is blocking the request. Please check backend CORS configuration.';
+      } else if (!errorMessage || errorMessage === '') {
+        errorMessage = 'An unexpected error occurred. Please try again.';
+      }
+      
+      console.error('Error:', err);
+      setAlert({ type: 'error', message: errorMessage });
     } finally {
       setIsLoading(false);
     }
@@ -147,10 +182,36 @@ const LoginPage = () => {
                       required
                       sx={{ mb: 3 }}
                     >
+                      <MenuItem value="student">Student</MenuItem>
                       <MenuItem value="admin">Admin</MenuItem>
                       <MenuItem value="teacher">Teacher</MenuItem>
-                      <MenuItem value="staff">Staff</MenuItem>
                     </TextField>
+                    {formData.role === 'student' && (
+                      <TextField
+                        fullWidth
+                        select
+                        label="Class"
+                        value={formData.class}
+                        onChange={handleChange('class')}
+                        required
+                        sx={{ mb: 3 }}
+                      >
+                        <MenuItem value="Pre-K">Pre-K</MenuItem>
+                        <MenuItem value="Kindergarten">Kindergarten</MenuItem>
+                        <MenuItem value="Class 1">Class 1</MenuItem>
+                        <MenuItem value="Class 2">Class 2</MenuItem>
+                        <MenuItem value="Class 3">Class 3</MenuItem>
+                        <MenuItem value="Class 4">Class 4</MenuItem>
+                        <MenuItem value="Class 5">Class 5</MenuItem>
+                        <MenuItem value="Class 6">Class 6</MenuItem>
+                        <MenuItem value="Class 7">Class 7</MenuItem>
+                        <MenuItem value="Class 8">Class 8</MenuItem>
+                        <MenuItem value="Class 9">Class 9</MenuItem>
+                        <MenuItem value="Class 10">Class 10</MenuItem>
+                        <MenuItem value="Class 11">Class 11</MenuItem>
+                        <MenuItem value="Class 12">Class 12</MenuItem>
+                      </TextField>
+                    )}
                   </>
                 )}
 
@@ -211,7 +272,7 @@ const LoginPage = () => {
                     onClick={() => {
                       setIsLoginMode((prev) => !prev);
                       setAlert({ type: '', message: '' });
-                      setFormData({ username: '', email: '', password: '', role: 'admin' });
+                      setFormData({ username: '', email: '', password: '', role: 'student', class: '' });
                     }}
                     disabled={isLoading}
                     sx={{ color: '#00335E', fontWeight: 600 }}

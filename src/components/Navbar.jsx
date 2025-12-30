@@ -42,12 +42,27 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  const menuItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Attendance', path: '/attendance' },
-    { label: 'Homework', path: '/homework' },
-    { label: 'Fees', path: '/fees' },
-  ];
+  const getMenuItems = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userRole = user.role || 'student';
+    
+    if (userRole === 'student') {
+      return [
+        { label: 'Attendance', path: '/attendance' },
+        { label: 'Homework', path: '/homework' },
+        { label: 'Fees', path: '/fees' },
+      ];
+    }
+    
+    return [
+      { label: 'Dashboard', path: '/dashboard' },
+      { label: 'Attendance', path: '/attendance' },
+      { label: 'Homework', path: '/homework' },
+      { label: 'Fees', path: '/fees' },
+    ];
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <AppBar position="static" sx={{ backgroundColor: '#00335E' }}>

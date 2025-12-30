@@ -28,7 +28,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 const FeeStatus = () => {
   const [feesData, setFeesData] = useState([]);
@@ -39,21 +39,46 @@ const FeeStatus = () => {
 
   const fetchFeeData = async () => {
     setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/fees`, {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userRole = user.role || 'student';
+      const userId = user._id || user.id;
+
+      // Students fetch only their own fees
+      const url = userRole === 'student' 
+        ? `${API_BASE_URL}/fees/student/${userId}`
+        : `${API_BASE_URL}/fees`;
+
+      const res = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
 
-      if (!res.ok) throw new Error('Failed to fetch fee data');
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        if (res.status === 403) {
+          throw new Error('You do not have permission to view fee data.');
+        }
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch fee data');
+      }
+
       const data = await res.json();
-      setFeesData(data);
+      // If student, wrap single fee in array; if admin, use array directly
+      const feesArray = userRole === 'student' 
+        ? (Array.isArray(data) ? data : [data])
+        : (Array.isArray(data) ? data : []);
+      setFeesData(feesArray);
       setError('');
     } catch (err) {
-      setError(err.message);
+      console.error('Fee data fetch error:', err);
+      setError(err.message || 'Failed to fetch fee data. Please try again.');
     } finally {
       setLoading(false);
     }

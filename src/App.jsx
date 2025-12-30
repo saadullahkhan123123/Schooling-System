@@ -16,6 +16,22 @@ const PrivateRoute = ({ children }) => {
   return token ? children : <Navigate to="/login" replace />;
 };
 
+// ✅ Role-based Route Component
+const RoleBasedRoute = ({ children, allowedRoles = [] }) => {
+  const token = localStorage.getItem("token");
+  if (!token) return <Navigate to="/login" replace />;
+  
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole = user.role || "student";
+  
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+    // Redirect students to attendance, others to dashboard
+    return <Navigate to={userRole === "student" ? "/attendance" : "/dashboard"} replace />;
+  }
+  
+  return children;
+};
+
 const App = () => {
   const isAuthenticated = !!localStorage.getItem("token");
 
@@ -33,13 +49,13 @@ const App = () => {
               element={<LoginPage onLogin={() => window.location.reload()} />}
             />
 
-            {/* 🏠 Dashboard */}
+            {/* 🏠 Dashboard - Admin/Teacher only */}
             <Route
               path="/dashboard"
               element={
-                <PrivateRoute>
+                <RoleBasedRoute allowedRoles={["admin", "teacher"]}>
                   <Dashboard />
-                </PrivateRoute>
+                </RoleBasedRoute>
               }
             />
 
@@ -53,7 +69,7 @@ const App = () => {
               }
             />
 
-            {/* 📚 Homework */}
+            {/* 📚 Homework - All roles (students see only their homework) */}
             <Route
               path="/homework"
               element={
@@ -63,7 +79,7 @@ const App = () => {
               }
             />
 
-            {/* 💰 Fee Status */}
+            {/* 💰 Fee Status - All roles (students see only their fees) */}
             <Route
               path="/fees"
               element={
@@ -108,7 +124,10 @@ const App = () => {
               path="*"
               element={
                 <Navigate
-                  to={isAuthenticated ? "/dashboard" : "/login"}
+                  to={isAuthenticated ? (() => {
+                    const user = JSON.parse(localStorage.getItem("user") || "{}");
+                    return user.role === "student" ? "/attendance" : "/dashboard";
+                  })() : "/login"}
                   replace
                 />
               }
