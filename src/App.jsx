@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Box } from "@mui/material";
 import Navbar from "./components/Navbar";
 import LoginPage from "./components/LoginPage";
 import Dashboard from "./components/Dashboard";
@@ -41,7 +42,7 @@ const App = () => {
         {/* ✅ Navbar only after login */}
         {isAuthenticated && <Navbar />}
 
-        <main className="flex-1 p-4 md:p-6">
+        <Box component="main" sx={{ flex: 1, p: { xs: 1.5, sm: 2, md: 3 } }}>
           <Routes>
             {/* 🔐 Public Route */}
             <Route
@@ -133,7 +134,7 @@ const App = () => {
               }
             />
           </Routes>
-        </main>
+        </Box>
       </div>
     </Router>
   );
