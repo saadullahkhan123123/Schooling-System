@@ -150,7 +150,7 @@ export default function Attendance() {
             "& .MuiTabs-indicator": { backgroundColor: "#C99228" },
           }}
         >
-          <Tab label="Mark Attendance" />
+          <Tab label="Mark the Attendance" />
           <Tab label="Attendance Report" />
         </Tabs>
       )}
